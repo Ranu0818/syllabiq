@@ -167,6 +167,7 @@ Output JSON: { "quizzes": [{ "question": "...", "options": ["..."], "correct_ind
 async function generateWithGemini<T>(systemPrompt: string, content: string, timeout: number = 45000): Promise<T> {
     if (GEMINI_KEYS.length > 0) {
         try {
+            console.log(`[AI TRACE] Attempting Gemini generation (Timeout: ${timeout}ms)...`);
             const response = await fetchWithTimeout(getGeminiUrl(), {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -176,12 +177,21 @@ async function generateWithGemini<T>(systemPrompt: string, content: string, time
                 }),
             }, timeout);
 
-            if (!response.ok) throw new Error("Gemini API Error");
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                console.error(`[AI ERROR] Gemini responded with ${response.status}:`, errData);
+                throw new Error(`Gemini API Error ${response.status}`);
+            }
+
             const data = await response.json();
             const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (text) return JSON.parse(text) as T;
+            if (text) {
+                console.log("[AI TRACE] Gemini success!");
+                return JSON.parse(text) as T;
+            }
+            throw new Error("No response from Gemini");
         } catch (e) {
-            console.warn(`Gemini attempt failed (timeout: ${timeout}ms):`, e);
+            console.warn(`[AI WARN] Gemini attempt failed:`, e);
         }
     }
 
