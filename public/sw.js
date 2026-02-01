@@ -28,21 +28,24 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-self.addEventListener('fetch', (event) => {
-    // Network-First strategy for Next.js data/API
-    if (event.request.url.includes('/_next/') || event.request.url.includes('/api/')) {
-        event.respondWith(
-            fetch(event.request)
-                .catch(() => caches.match(event.request))
-        );
-        return;
-    }
+const url = event.request.url;
 
-    // Stale-While-Revalidate for others
-    event.respondWith(
-        caches.match(event.request)
-            .then((response) => {
-                return response || fetch(event.request);
-            })
-    );
+// 1. Skip Supabase, Next.js internal calls, and other non-cacheable stuff
+if (
+    url.includes('supabase.co') ||
+    url.includes('/_next/') ||
+    url.includes('/api/') ||
+    event.request.method !== 'GET'
+) {
+    // Network-Only for these
+    return;
+}
+
+// 2. Cache-First with Network Fallback for Static Assets (CSS, JS, Images, Icons)
+event.respondWith(
+    caches.match(event.request)
+        .then((response) => {
+            return response || fetch(event.request);
+        })
+);
 });

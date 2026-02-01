@@ -123,11 +123,13 @@ export function StudyPackCreator({ isOpen, onClose, onSuccess }: StudyPackCreato
 
         setIsGenerating(true);
         try {
+            console.log("Starting generation for topic:", topicQuery.trim());
             const generated = await generateFromTopicAction(
                 topicQuery.trim(),
                 profile.grade || "10",
                 profile.stream
             );
+            console.log("AI Generation successful:", generated.title);
 
             // Save to Supabase (with fallback)
             let payload: any = {
@@ -144,16 +146,22 @@ export function StudyPackCreator({ isOpen, onClose, onSuccess }: StudyPackCreato
                 suggested_questions: generated.suggestedQuestions,
             };
 
+            console.log("Saving to Supabase...");
             let { data, error } = await supabase.from("study_packs").insert(payload).select().single();
 
-            if (error && error.message?.includes("suggested_questions")) {
-                delete payload.suggested_questions;
-                const retry = await supabase.from("study_packs").insert(payload).select().single();
-                data = retry.data;
-                error = retry.error;
+            if (error) {
+                console.error("Supabase Error:", error);
+                if (error.message?.includes("suggested_questions")) {
+                    console.log("Retrying without suggested_questions column...");
+                    delete payload.suggested_questions;
+                    const retry = await supabase.from("study_packs").insert(payload).select().single();
+                    data = retry.data;
+                    error = retry.error;
+                }
             }
 
             if (error) throw error;
+            console.log("Successfully saved pack:", data?.id);
 
             setTopicQuery("");
             setCreateType(null);
