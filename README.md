@@ -3,10 +3,9 @@
 **Motto:** "Design Your Dreams into Reality"
 
 ## 👥 Team Members
-* [Your Name]
-* [Member 2 Name]
-* [Member 3 Name]
-* [Member 4 Name]
+* S V S Ransaja Vithanage
+* E A Pushpika Suhandakara
+* Thisanga Dihen
 
 ---
 
