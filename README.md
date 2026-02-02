@@ -5,8 +5,8 @@
 ---
 
 ## 🔗 Project Links
-- **Live Demo:** [🚀 Click here to visit SyllabiQ](https://syllabiq.netlify.app) *(Replace with your URL)*
-- **Demo Video:** [📺 Watch our Video Demo](https://youtube.com/...) *(Add your YouTube link here)*
+- **Live Demo:** [🚀 Click here to visit SyllabiQ](https://syllabiq.netlify.app)
+- **Demo Video:** [📺 Watch our Video Demo](https://youtube.com/...)
 
 ---
 
