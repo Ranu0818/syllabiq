@@ -1,6 +1,6 @@
 # SyllabiQ - Smart Study Companion 🎓
 ### DEV{thon} 3.0 - Web Implementation Round (School Category)
-**Motto:** "Design Your Dreams into Reality"
+
 
 ## 👥 Team Members
 * S V S Ransaja Vithanage
