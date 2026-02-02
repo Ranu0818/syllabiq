@@ -1,18 +1,17 @@
 # SyllabiQ - Smart Study Companion 🎓
-### DEV{thon} 3.0 - Web Implementation Round (School Category)
+> **Design Your Dreams into Reality**
+> *Official Submission for DEV{thon} 3.0 - Web Implementation Round (School Category)*
 
+---
 
-## 👥 Team Members
-* S V S Ransaja Vithanage
-* E A Pushpika Suhandakara
-* Thisanga Dihen
+## 🔗 Project Links
+- **Live Demo:** [🚀 Click here to visit SyllabiQ](https://syllabiq.netlify.app) *(Replace with your URL)*
+- **Demo Video:** [📺 Watch our Video Demo](https://youtube.com/...) *(Add your YouTube link here)*
 
 ---
 
 ## 📖 Project Overview
-SyllabiQ is an AI-powered educational web application designed to help Sri Lankan students convert high-bandwidth content (like YouTube videos) into low-data, syllabus-aligned study packs. It specifically targets the "Digital Clarity" UI concept to remove distractions and focus on learning.
-
-**Live Demo:** [Add your Vercel URL here after deployment]
+SyllabiQ is an AI-powered educational web application designed to democratize learning for Sri Lankan students. By converting resource-heavy content (YouTube, PDFs, Text) into lightweight, syllabus-aligned study packs, we address high data costs and bandwidth limitations. Our **"Digital Clarity"** UI ensures a focused, distraction-free environment tailored to the local curriculum.
 
 ## 🛠️ Tech Stack
 *   **Framework:** Next.js 15 (App Router)
