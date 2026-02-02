@@ -8,7 +8,6 @@ import {
     Layers,
     CheckSquare,
     ChevronLeft,
-    ChevronRight,
     Star,
     RefreshCw,
     CheckCircle2,
@@ -19,8 +18,9 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { Card, Button, LoadingSpinner } from "@/components/ui";
-import { supabase, StudyPack } from "@/lib/supabase";
-import { useAuth } from "@/contexts/AuthContext";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { StudyPack } from "@/lib/supabase"; // For types
 import { askFollowUpAction } from "@/app/actions/ai";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -30,7 +30,7 @@ type Tab = "notes" | "flashcards" | "quiz";
 export default function StudyPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const router = useRouter();
-    const { user, isAuthenticated } = useAuth();
+
 
     const [pack, setPack] = useState<StudyPack | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -60,7 +60,7 @@ export default function StudyPage({ params }: { params: Promise<{ id: string }> 
         try {
             const answer = await askFollowUpAction(question, pack.title, pack.grade);
             setChatMessages(prev => [...prev, { role: "ai", content: answer }]);
-        } catch (error) {
+        } catch {
             setChatMessages(prev => [...prev, { role: "ai", content: "Sorry, I couldn't answer that. Please try again." }]);
         } finally {
             setIsAskingAI(false);
@@ -70,14 +70,14 @@ export default function StudyPage({ params }: { params: Promise<{ id: string }> 
     useEffect(() => {
         const fetchPack = async () => {
             try {
-                const { data, error } = await supabase
-                    .from("study_packs")
-                    .select("*")
-                    .eq("id", id)
-                    .single();
+                const docRef = doc(db, "study_packs", id);
+                const docSnap = await getDoc(docRef);
 
-                if (error) throw error;
-                setPack(data);
+                if (docSnap.exists()) {
+                    setPack({ id: docSnap.id, ...docSnap.data() } as StudyPack);
+                } else {
+                    console.error("No such study pack!");
+                }
             } catch (err) {
                 console.error("Error fetching pack:", err);
             } finally {
@@ -139,7 +139,7 @@ export default function StudyPage({ params }: { params: Promise<{ id: string }> 
     return (
         <AppShell showNav={false}>
             {/* Sticky Header */}
-            <div className="sticky top-0 z-30 glass-card rounded-none border-x-0 border-t-0 p-4">
+            <div className="sticky top-0 z-50 glass-card rounded-none border-x-0 border-t-0 p-4 backdrop-blur-xl">
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => router.back()}
@@ -173,7 +173,7 @@ export default function StudyPage({ params }: { params: Promise<{ id: string }> 
                 </div>
             </div>
 
-            <div className="container py-6 pb-24">
+            <div className="container py-6 pb-24" style={{ scrollPaddingTop: "120px" }}>
                 <AnimatePresence mode="wait">
                     {activeTab === "notes" && (
                         <motion.div
@@ -181,28 +181,34 @@ export default function StudyPage({ params }: { params: Promise<{ id: string }> 
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
-                            className="prose prose-invert max-w-none"
                         >
-                            <Card className="min-h-[60vh] p-6 leading-relaxed">
+                            <Card className="min-h-[60vh] p-6 md:p-8 leading-relaxed overflow-hidden">
                                 <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
                                     components={{
-                                        h1: ({ node, ...props }) => <h1 className="heading-2 mb-4 mt-6 text-[var(--accent-cyan)] uppercase tracking-tight" {...props} />,
-                                        h2: ({ node, ...props }) => <h2 className="heading-3 mb-3 mt-8 border-b border-[var(--glass-border)] pb-2 text-white" {...props} />,
-                                        h3: ({ node, ...props }) => <h3 className="heading-3 mb-2 mt-6 text-[var(--text-primary)]" {...props} />,
-                                        p: ({ node, ...props }) => <p className="mb-4 text-[var(--text-secondary)] leading-7 text-justify" {...props} />,
-                                        ul: ({ node, ...props }) => <ul className="mb-4 list-disc pl-6 space-y-2 text-[var(--text-secondary)]" {...props} />,
-                                        ol: ({ node, ...props }) => <ol className="mb-4 list-decimal pl-6 space-y-2 text-[var(--text-secondary)]" {...props} />,
-                                        li: ({ node, ...props }) => <li className="pl-1 marker:text-[var(--accent-cyan)]" {...props} />,
-                                        blockquote: ({ node, ...props }) => (
+                                        h1: ({ ...props }) => <h1 className="text-2xl md:text-3xl font-black mb-4 mt-6 text-[var(--accent-cyan)] uppercase tracking-tight" {...props} />,
+                                        h2: ({ ...props }) => <h2 className="text-xl md:text-2xl font-bold mb-3 mt-8 border-b border-[var(--glass-border)] pb-2 text-white" {...props} />,
+                                        h3: ({ ...props }) => <h3 className="text-lg md:text-xl font-bold mb-2 mt-6 text-[var(--text-primary)]" {...props} />,
+                                        p: ({ ...props }) => <p className="mb-4 text-[var(--text-secondary)] leading-7 text-base break-words" {...props} />,
+                                        ul: ({ ...props }) => <ul className="mb-4 list-disc pl-6 space-y-2 text-[var(--text-secondary)] break-words" {...props} />,
+                                        ol: ({ ...props }) => <ol className="mb-4 list-decimal pl-6 space-y-2 text-[var(--text-secondary)] break-words" {...props} />,
+                                        li: ({ ...props }) => <li className="pl-1 leading-7 marker:text-[var(--accent-cyan)]" {...props} />,
+                                        blockquote: ({ ...props }) => (
                                             <blockquote className="border-l-4 border-[var(--accent-cyan)] pl-4 my-6 bg-[rgba(0,212,255,0.05)] py-3 rounded-r-lg italic text-[var(--text-secondary)] shadow-sm" {...props} />
                                         ),
-                                        strong: ({ node, ...props }) => <strong className="font-bold text-[var(--text-primary)]" {...props} />,
-                                        table: ({ node, ...props }) => <div className="overflow-x-auto my-6 rounded-lg border border-[var(--glass-border)]"><table className="w-full text-sm text-left" {...props} /></div>,
-                                        thead: ({ node, ...props }) => <thead className="bg-[var(--glass-bg)] text-[var(--text-primary)] uppercase font-bold" {...props} />,
-                                        th: ({ node, ...props }) => <th className="px-6 py-3 border-b border-[var(--glass-border)]" {...props} />,
-                                        td: ({ node, ...props }) => <td className="px-6 py-4 border-b border-[var(--glass-border)] text-[var(--text-secondary)]" {...props} />,
-                                        code: ({ node, ...props }) => <code className="bg-[rgba(255,255,255,0.1)] rounded px-1.5 py-0.5 font-mono text-sm text-[var(--accent-cyan)]" {...props} />,
+                                        strong: ({ ...props }) => <strong className="font-bold text-white" {...props} />,
+                                        em: ({ ...props }) => <em className="italic text-[var(--text-primary)]" {...props} />,
+                                        table: ({ ...props }) => <div className="overflow-x-auto my-6 rounded-lg border border-[var(--glass-border)]"><table className="w-full text-sm text-left" {...props} /></div>,
+                                        thead: ({ ...props }) => <thead className="bg-[var(--glass-bg)] text-[var(--text-primary)] uppercase font-bold" {...props} />,
+                                        th: ({ ...props }) => <th className="px-6 py-3 border-b border-[var(--glass-border)]" {...props} />,
+                                        td: ({ ...props }) => <td className="px-6 py-4 border-b border-[var(--glass-border)] text-[var(--text-secondary)]" {...props} />,
+                                        code: ({ inline, ...props }: { inline?: boolean;[key: string]: any }) =>
+                                            inline ? (
+                                                <code className="bg-[rgba(255,255,255,0.08)] rounded px-1.5 py-0.5 font-mono text-sm text-[var(--text-primary)] break-all" {...props} />
+                                            ) : (
+                                                <code className="block bg-[rgba(0,0,0,0.3)] border border-[var(--glass-border)] rounded-lg p-4 font-mono text-sm text-[var(--text-secondary)] overflow-x-auto my-4 whitespace-pre-wrap break-words" {...props} />
+                                            ),
+                                        pre: ({ ...props }) => <pre className="my-4 overflow-x-auto" {...props} />,
                                     }}
                                 >
                                     {pack.notes}
@@ -210,26 +216,30 @@ export default function StudyPage({ params }: { params: Promise<{ id: string }> 
                             </Card>
 
                             {/* Q&A Chat Section */}
-                            <Card className="mt-6 p-4">
+                            <Card className="mt-6 p-6">
                                 <div className="flex items-center gap-2 mb-4">
-                                    <MessageCircle className="text-[var(--accent-cyan)]" size={20} />
-                                    <h3 className="font-bold">Ask Follow-up Questions</h3>
+                                    <MessageCircle className="text-[var(--accent-cyan)]" size={22} />
+                                    <h3 className="text-lg font-bold">Ask Follow-up Questions</h3>
                                 </div>
 
                                 {/* Suggested Questions */}
-                                {(pack as any).suggestedQuestions && (pack as any).suggestedQuestions.length > 0 && (
-                                    <div className="mb-4">
-                                        <p className="text-xs text-[var(--text-muted)] mb-2 flex items-center gap-1">
-                                            <Sparkles size={12} /> Suggested:
+                                {pack.suggested_questions && pack.suggested_questions.length > 0 && (
+                                    <div className="mb-6">
+                                        <p className="text-sm font-medium text-[var(--text-primary)] mb-3 flex items-center gap-2">
+                                            <Sparkles size={16} className="text-[var(--secondary-gold)]" />
+                                            <span>Quick Questions:</span>
                                         </p>
-                                        <div className="flex flex-wrap gap-2">
-                                            {(pack as any).suggestedQuestions.slice(0, 3).map((q: string, i: number) => (
+                                        <div className="flex flex-col gap-2">
+                                            {pack.suggested_questions.map((q: string, i: number) => (
                                                 <button
                                                     key={i}
                                                     onClick={() => handleAskQuestion(q)}
-                                                    className="text-xs px-3 py-1.5 rounded-full bg-[var(--glass-bg)] border border-[var(--glass-border)] hover:border-[var(--accent-cyan)]/40 transition-all"
+                                                    className="text-left text-sm px-4 py-3 rounded-lg bg-gradient-to-r from-[var(--glass-bg)] to-[rgba(0,212,255,0.05)] border border-[var(--glass-border)] hover:border-[var(--accent-cyan)] hover:shadow-[0_0_15px_rgba(0,212,255,0.2)] transition-all group"
                                                 >
-                                                    {q}
+                                                    <span className="flex items-center gap-2">
+                                                        <span className="text-xs font-bold text-[var(--accent-cyan)] min-w-[20px]">Q{i + 1}</span>
+                                                        <span className="text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">{q}</span>
+                                                    </span>
                                                 </button>
                                             ))}
                                         </div>
@@ -250,7 +260,18 @@ export default function StudyPage({ params }: { params: Promise<{ id: string }> 
                                                 <p className="text-xs font-bold mb-1 text-[var(--text-muted)]">
                                                     {msg.role === "user" ? "You" : "AI Tutor"}
                                                 </p>
-                                                {msg.content}
+                                                <ReactMarkdown
+                                                    remarkPlugins={[remarkGfm]}
+                                                    components={{
+                                                        p: ({ ...props }) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />,
+                                                        ul: ({ ...props }) => <ul className="mb-2 list-disc pl-4 space-y-1" {...props} />,
+                                                        ol: ({ ...props }) => <ol className="mb-2 list-decimal pl-4 space-y-1" {...props} />,
+                                                        strong: ({ ...props }) => <strong className="font-bold text-[var(--accent-cyan)]" {...props} />,
+                                                        li: ({ ...props }) => <li className="leading-relaxed" {...props} />,
+                                                    }}
+                                                >
+                                                    {msg.content}
+                                                </ReactMarkdown>
                                             </div>
                                         ))}
                                     </div>

@@ -1,13 +1,23 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Library as LibraryIcon, BookOpen, Plus, ChevronRight, Trash2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout";
 import { Card, CardTitle, Button } from "@/components/ui";
 
-import { useState, useEffect } from "react";
-import { supabase, StudyPack } from "@/lib/supabase";
+import { useState, useEffect, useCallback } from "react";
+import {
+    collection,
+    query,
+    where,
+    orderBy,
+    getDocs,
+    deleteDoc,
+    doc
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { StudyPack } from "@/lib/supabase"; // For types
 import { useAuth } from "@/contexts/AuthContext";
 import { useCreation } from "@/contexts/CreationContext";
 
@@ -30,12 +40,7 @@ export default function LibraryPage() {
         }
 
         try {
-            const { error } = await supabase
-                .from("study_packs")
-                .delete()
-                .eq("id", id);
-
-            if (error) throw error;
+            await deleteDoc(doc(db, "study_packs", id));
             setStudyPacks(prev => prev.filter(p => p.id !== id));
             setConfirmDeleteId(null);
         } catch (err) {
@@ -43,24 +48,32 @@ export default function LibraryPage() {
         }
     };
 
-    const fetchPacks = async () => {
+    const fetchPacks = useCallback(async () => {
         if (!user) return;
 
         try {
-            const { data, error } = await supabase
-                .from("study_packs")
-                .select("*")
-                .eq("user_id", user.id)
-                .order("created_at", { ascending: false });
+            const q = query(
+                collection(db, "study_packs"),
+                where("user_id", "==", user.uid)
+                // orderBy removed to prevent "Index Required" error. Sorting done in-memory below.
+            );
 
-            if (error) throw error;
-            setStudyPacks(data || []);
+            const querySnapshot = await getDocs(q);
+            const packs = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            })) as StudyPack[];
+
+            // Sort in-memory (Newest first)
+            packs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+            setStudyPacks(packs);
         } catch (err) {
             console.error("Error fetching study packs:", err);
         } finally {
             setIsLoadingPacks(false);
         }
-    };
+    }, [user]);
 
     useEffect(() => {
         if (isAuthenticated) {
@@ -68,7 +81,7 @@ export default function LibraryPage() {
         } else {
             setIsLoadingPacks(false);
         }
-    }, [user, isAuthenticated]);
+    }, [user, isAuthenticated, fetchPacks]);
 
     return (
         <AppShell onSuccess={fetchPacks}>
@@ -112,7 +125,7 @@ export default function LibraryPage() {
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {studyPacks.map((pack, index) => (
+                        {studyPacks.map((pack) => (
                             <Link key={pack.id} href={`/study/${pack.id}`}>
                                 <Card className="cursor-pointer hover:border-[var(--accent-cyan)] transition-colors">
                                     <div className="flex items-start justify-between mb-3">

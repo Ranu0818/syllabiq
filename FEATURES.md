@@ -6,10 +6,11 @@ SyllabiQ is an AI-powered Smart Study Companion designed to democratize educatio
 ## 🌟 Core Features
 
 ### 1. 🧠 AI-Powered Study Engine
-- **Youtube to Notes**: Instantly converts educational videos into structured, visual study notes using Gemini 2.0.
+- **Youtube to StudyPack**: Enhanced multi-method transcript extraction (Internal + Proxy API) with "Super-Brain" fallback if transcripts are blocked.
+- **Direct PDF Upload**: Client-side text extraction using `pdf.js` for privacy-aware study material generation.
 - **Topic Search**: Generates comprehensive lesson packs from a simple topic keyword.
-- **Parallel Processing**: Uses concurrent AI agents to generate Notes, Flashcards, and Quizzes simultaneously for speed.
-- **Fail-Safe Architecture**: Includes a robust fallback system (Mock Data) to ensure functionality even if API limits are reached.
+- **AI Study Mate**: Tailored conversational tutor supporting the Sri Lankan curriculum with Markdown-rich, mobile-friendly responses.
+- **Parallel Processing**: Uses concurrent AI agents to generate Notes, Flashcards, and Quizzes simultaneously.
 
 ### 2. 📱 PWA & Offline Capabilities (Low-Data First)
 - **Offline Mode**: Fully functional offline access to the app shell and cached study packs.
@@ -28,9 +29,10 @@ SyllabiQ is an AI-powered Smart Study Companion designed to democratize educatio
 
 ## 🛠️ Tech Stack
 - **Frontend**: Next.js 15 (React 19), Tailwind CSS, Framer Motion
-- **Backend/Db**: Supabase (PostgreSQL, Auth, RLS)
+- **Backend/Db**: Firebase (Cloud Firestore, Authentication, Analytics)
 - **AI**: Google Gemini 2.0 Flash, GROQ (Llama 3.3)
-- **PWA**: Service Workers, Manifest, Cache API
+- **PDF Logic**: Client-side extraction via `pdfjs-dist`
+- **PWA**: Service Workers with advanced offline caching
 
 ## 🛡️ Hackathon Special Features
 - **API Key Rotation**: Application automatically rotates between multiple API keys to prevent rate-limiting during demos.

@@ -3,11 +3,6 @@
 import { motion } from "framer-motion";
 import {
     BarChart3,
-    TrendingUp,
-    Award,
-    Target,
-    Flame,
-    Trophy,
 } from "lucide-react";
 import {
     AreaChart,
@@ -21,10 +16,101 @@ import { AppShell } from "@/components/layout";
 import { Card, CardTitle } from "@/components/ui";
 
 // No demo progress data; real data will be shown when available
-const weeklyData: any[] = [];
-const stats: any[] = [];
+import { useAuth } from "@/contexts/AuthContext";
+import { db } from "@/lib/firebase";
+import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
+import { useState, useEffect } from "react";
+import {
+    Trophy,
+    Flame,
+    Zap,
+    Target,
+    BookOpen
+} from "lucide-react";
 
 export default function ProgressPage() {
+    const { user, profile } = useAuth();
+    const [stats, setStats] = useState<any[]>([]);
+    const [weeklyData, setWeeklyData] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!user || !profile) return;
+
+            try {
+                // 1. Fetch all packs for calculation
+                const q = query(
+                    collection(db, "study_packs"),
+                    where("user_id", "==", user.uid)
+                );
+                const snapshot = await getDocs(q);
+                const packs = snapshot.docs.map(d => ({ ...d.data(), created_at: d.data().created_at }));
+
+                // 2. Calculate Weekly Activity
+                const last7Days = [...Array(7)].map((_, i) => {
+                    const d = new Date();
+                    d.setDate(d.getDate() - i);
+                    return d.toISOString().split('T')[0];
+                }).reverse();
+
+                const activityMap = packs.reduce((acc: any, pack: any) => {
+                    const date = pack.created_at?.split('T')[0];
+                    if (date) {
+                        acc[date] = (acc[date] || 0) + 1;
+                    }
+                    return acc;
+                }, {});
+
+                const chartData = last7Days.map(date => ({
+                    day: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
+                    study: (activityMap[date] || 0) * 15, // Mock 15 mins per pack
+                    quiz: 0 // Placeholder
+                }));
+
+                setWeeklyData(chartData);
+
+                // 3. Set Stats
+                setStats([
+                    {
+                        label: "Total XP",
+                        value: profile.xp || 0,
+                        unit: "XP",
+                        icon: Trophy,
+                        color: "var(--secondary-gold)"
+                    },
+                    {
+                        label: "Day Streak",
+                        value: profile.streak || 0,
+                        unit: "Days",
+                        icon: Flame,
+                        color: "#FF5722"
+                    },
+                    {
+                        label: "Data Saved",
+                        value: profile.data_saved_mb || 0,
+                        unit: "MB",
+                        icon: Zap,
+                        color: "#10B981"
+                    },
+                    {
+                        label: "Study Packs",
+                        value: packs.length,
+                        unit: "Packs",
+                        icon: BookOpen,
+                        color: "var(--accent-cyan)"
+                    }
+                ]);
+
+            } catch (err) {
+                console.error("Error fetching progress:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [user, profile]);
     return (
         <AppShell>
             <div className="container py-6">

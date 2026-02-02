@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import {
@@ -20,17 +20,29 @@ import {
   CloudSun,
   Stars,
   Search,
+  MessageCircle,
 } from "lucide-react";
 import { AppShell } from "@/components/layout";
-import { Card, Button, Input } from "@/components/ui";
+import { Card, Button } from "@/components/ui";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCreation } from "@/contexts/CreationContext";
-import { supabase } from "@/lib/supabase";
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  getDocs,
+  getCountFromServer,
+  Timestamp
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export default function HomePage() {
   const { user, profile, isAuthenticated, isLoading } = useAuth();
   const { openCreator } = useCreation();
-  const [recentPacks, setRecentPacks] = useState<any[]>([]);
+  const [recentPacks, setRecentPacks] = useState<any[]>([]); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [totalPacksCount, setTotalPacksCount] = useState(0);
   const [isLoadingPacks, setIsLoadingPacks] = useState(true);
   const [goalPercentage, setGoalPercentage] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -44,52 +56,65 @@ export default function HomePage() {
   };
 
   // Function to refresh packs when a new one is created
-  const fetchRecentPacks = async () => {
+  // Function to refresh packs when a new one is created
+  const fetchRecentPacks = useCallback(async () => {
     if (!user) {
       setIsLoadingPacks(false);
       return;
     }
     try {
-      const { data, error } = await supabase
-        .from("study_packs")
-        .select("id, title, subject, grade, flashcards, quizzes, created_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(3);
+      // 1. Fetch Recent (No orderBy to avoid index issues)
+      const qRecent = query(
+        collection(db, "study_packs"),
+        where("user_id", "==", user.uid)
+      );
 
-      if (error) {
-        console.error("Supabase Error Details:", error.message, error.code, error.details);
-        throw error;
-      }
-      setRecentPacks(data || []);
-    } catch (err: any) {
+      const querySnapshot = await getDocs(qRecent);
+      const packs = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      // In-memory sort (newest first)
+      packs.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()); // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      setRecentPacks(packs.slice(0, 3)); // Only take top 3
+      setTotalPacksCount(packs.length);  // Use full length for total count
+
+    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       console.error("Error fetching recent packs:", err?.message || err);
     } finally {
       setIsLoadingPacks(false);
     }
-  };
+  }, [user]);
 
-  const fetchGoalProgress = async () => {
+  const fetchGoalProgress = useCallback(async () => {
     if (!user) return;
     try {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-      const { count, error } = await supabase
-        .from("study_packs")
-        .select("*", { count: 'exact', head: true })
-        .eq("user_id", user.id)
-        .gte("created_at", sevenDaysAgo.toISOString());
+      // Query by user_id ONLY to avoid composite index error
+      const q = query(
+        collection(db, "study_packs"),
+        where("user_id", "==", user.uid)
+      );
 
-      if (!error && count !== null) {
-        const weeklyGoal = 5; // Study 5 packs a week
-        const percentage = Math.min(Math.round((count / weeklyGoal) * 100), 100);
-        setGoalPercentage(percentage);
-      }
+      // Fetch docs and filter in memory
+      const snapshot = await getDocs(q);
+
+      const count = snapshot.docs.filter(doc => {
+        const data = doc.data();
+        return data.created_at >= sevenDaysAgo.toISOString();
+      }).length;
+
+      const weeklyGoal = 5; // Study 5 packs a week
+      const percentage = Math.min(Math.round((count / weeklyGoal) * 100), 100);
+      setGoalPercentage(percentage);
     } catch (err) {
       console.error("Error fetching goal progress:", err);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -98,7 +123,7 @@ export default function HomePage() {
     } else {
       setIsLoadingPacks(false);
     }
-  }, [user, isAuthenticated]);
+  }, [user, isAuthenticated, fetchRecentPacks, fetchGoalProgress]);
 
   const greeting = getGreeting();
 
@@ -265,7 +290,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <p className="text-[28px] font-bold leading-none mb-1">
-                    {recentPacks.length}+
+                    {totalPacksCount}
                   </p>
                   <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-bold">
                     AI Study Packs
@@ -347,6 +372,17 @@ export default function HomePage() {
               <Brain size={120} />
             </div>
           </button>
+
+          <Link href="/studymate" className="glass-card-accent p-6 text-left relative overflow-hidden group col-span-2">
+            <div className="relative z-10">
+              <MessageCircle className="text-[var(--accent-cyan)] mb-3" size={32} />
+              <h3 className="heading-3 mb-1">AI Study Mate 🤖</h3>
+              <p className="text-xs text-[var(--text-secondary)]">Get instant help & study tips tailored for you</p>
+            </div>
+            <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
+              <Sparkles size={120} />
+            </div>
+          </Link>
 
           <Link href="/library" className="glass-card p-4 text-left flex flex-col justify-between hover:border-[var(--secondary-gold)] transition-colors">
             <History className="text-[var(--secondary-gold)] mb-6" size={24} />

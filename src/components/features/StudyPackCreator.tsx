@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
     Sparkles,
@@ -8,7 +8,9 @@ import {
     FileText,
     Type,
     Upload,
-    Search
+    Search,
+    Loader2,
+    X
 } from "lucide-react";
 import { Button, Input } from "@/components/ui";
 import { BottomSheet } from "@/components/ui/Modal";
@@ -16,7 +18,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCreation } from "@/contexts/CreationContext";
 import { generateId } from "@/lib/utils";
 import { generateStudyPackAction, generateFromTopicAction } from "@/app/actions/ai";
-import { supabase } from "@/lib/supabase";
+import { collection, addDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
+// Import pdfjs for client-side extraction
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Safe worker assignment
+if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+}
 
 interface StudyPackCreatorProps {
     isOpen: boolean;
@@ -26,13 +37,17 @@ interface StudyPackCreatorProps {
 
 export function StudyPackCreator({ isOpen, onClose, onSuccess }: StudyPackCreatorProps) {
     const router = useRouter();
-    const { user, profile, isAuthenticated } = useAuth();
+    const { user, profile, isAuthenticated, updateProfile } = useAuth();
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [createType, setCreateType] = useState<"youtube" | "pdf" | "text" | "topic" | null>(null);
     const [youtubeUrl, setYoutubeUrl] = useState("");
+    const [pdfUrl, setPdfUrl] = useState("");
     const [textContent, setTextContent] = useState("");
     const [topicQuery, setTopicQuery] = useState("");
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isExtracting, setIsExtracting] = useState(false);
+    const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
 
     const { initialType, initialTopic } = useCreation();
 
@@ -48,68 +63,141 @@ export function StudyPackCreator({ isOpen, onClose, onSuccess }: StudyPackCreato
         setCreateType(type);
     };
 
+    const handleFileSelect = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || file.type !== "application/pdf") {
+            if (file) alert("Please select a PDF file.");
+            return;
+        }
+
+        setIsExtracting(true);
+        setSelectedFileName(file.name);
+
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+            const pdf = await loadingTask.promise;
+
+            let fullText = "";
+            const maxPages = Math.min(pdf.numPages, 30); // Prevent massive files from crashing
+
+            for (let i = 1; i <= maxPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items
+                    .map((item: any) => item.str)
+                    .join(" ");
+                fullText += pageText + "\n\n";
+            }
+
+            setTextContent(fullText.trim());
+            console.log(`Extracted ${fullText.length} characters from ${file.name}`);
+        } catch (error) {
+            console.error("PDF extraction error:", error);
+            alert("Failed to extract text from PDF. Please try copying the text manually.");
+            setSelectedFileName(null);
+        } finally {
+            setIsExtracting(false);
+        }
+    };
+
     const handleGenerate = async () => {
-        if (!isAuthenticated || !profile) {
+        if (!isAuthenticated) {
             alert("Please sign in to generate study packs.");
             return;
         }
+
+        if (!profile) {
+            alert("We're still setting up your profile. Please wait a moment or try refreshing the page.");
+            return;
+        }
+
         if (createType === "topic") return; // Topic uses separate handler
 
         setIsGenerating(true);
         try {
             console.log("Starting manual generation for type:", createType);
-            const content = createType === "youtube" ? youtubeUrl : textContent;
-            if (!content) return;
+            let content = textContent;
+
+            // For PDF, if we have extracted text, use it as 'text' type to avoid re-extraction attempt
+            let effectiveType: "youtube" | "pdf" | "text" = createType || "text";
+
+            if (createType === "youtube") {
+                content = youtubeUrl;
+            } else if (createType === "pdf") {
+                if (textContent.trim()) {
+                    // We have extracted text from a file/manual paste
+                    content = textContent;
+                    effectiveType = "text";
+                } else if (pdfUrl) {
+                    content = pdfUrl;
+                    effectiveType = "pdf";
+                }
+            }
+
+            if (!content) {
+                alert("Please provide content or a URL.");
+                setIsGenerating(false);
+                return;
+            }
 
             const generated = await generateStudyPackAction(
                 content,
-                createType || "text",
+                effectiveType,
                 profile.grade || "10",
                 profile.stream
             );
             console.log("AI Generation successful:", generated.title);
 
-            // Save to Supabase (with fallback)
-            let payload: any = {
-                user_id: user?.id,
-                title: generated.title,
-                subject: generated.subject,
-                grade: profile.grade,
+            // Save to Firestore
+            let finalGrade = profile.grade;
+            if (!finalGrade || finalGrade === "null" || finalGrade === "undefined") finalGrade = "11";
+
+            const payload = {
+                user_id: user?.uid, // Firebase uses uid
+                title: generated.title || "Untitled Pack",
+                subject: generated.subject || "General",
+                grade: finalGrade,
                 content_type: createType || "text",
-                source_url: createType === "youtube" ? youtubeUrl : null,
-                notes: generated.notes,
+                source_url: createType === "youtube" ? youtubeUrl : (createType === "pdf" ? pdfUrl : null),
+                notes: generated.notes || "",
                 flashcards: generated.flashcards.map(f => ({ ...f, id: generateId(), mastered: false })),
                 quizzes: generated.quizzes.map(q => ({ ...q, id: generateId() })),
                 is_offline: false,
-                suggested_questions: generated.suggestedQuestions,
+                suggested_questions: generated.suggestedQuestions || [],
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
             };
 
-            console.log("Saving to Supabase...");
-            let { data, error } = await supabase.from("study_packs").insert(payload).select().single();
+            console.log("Saving to Firestore...");
+            const docRef = await addDoc(collection(db, "study_packs"), payload);
+            console.log("Successfully saved manual pack:", docRef.id);
 
-            if (error) {
-                console.error("Supabase Error:", error);
-                if (error.message?.includes("suggested_questions")) {
-                    console.log("Retrying without suggested_questions column...");
-                    delete payload.suggested_questions;
-                    const retry = await supabase.from("study_packs").insert(payload).select().single();
-                    data = retry.data;
-                    error = retry.error;
-                }
-            }
+            // Update user stats (XP + Data Saved)
+            const newXp = (profile.xp || 0) + 50; // 50 XP per pack
+            const newDataSaved = (profile.data_saved_mb || 0) + 15; // Mock 15MB saved
+            await updateProfile({
+                xp: newXp,
+                data_saved_mb: newDataSaved
+            });
 
-            if (error) throw error;
-            console.log("Successfully saved manual pack:", data?.id);
-
+            // Cleanup
             setYoutubeUrl("");
+            setPdfUrl("");
             setTextContent("");
+            setTopicQuery("");
+            setSelectedFileName(null);
             setCreateType(null);
             onClose();
 
             if (onSuccess) onSuccess();
 
             // Navigate to the new study pack
-            router.push(`/study/${data.id}`);
+            router.push(`/study/${docRef.id}`);
 
         } catch (error: any) {
             console.error("Manual generation error:", error);
@@ -120,10 +208,16 @@ export function StudyPackCreator({ isOpen, onClose, onSuccess }: StudyPackCreato
     };
 
     const handleTopicGenerate = async () => {
-        if (!isAuthenticated || !profile) {
+        if (!isAuthenticated) {
             alert("Please sign in to generate study packs.");
             return;
         }
+
+        if (!profile) {
+            alert("We're still setting up your profile. Please wait a moment or try refreshing the page.");
+            return;
+        }
+
         if (!topicQuery.trim()) {
             alert("Please enter a topic to search.");
             return;
@@ -139,37 +233,35 @@ export function StudyPackCreator({ isOpen, onClose, onSuccess }: StudyPackCreato
             );
             console.log("AI Generation successful:", generated.title);
 
-            // Save to Supabase (with fallback)
-            let payload: any = {
-                user_id: user?.id,
-                title: generated.title,
-                subject: generated.subject,
-                grade: profile.grade,
+            // Save to Firestore
+            let finalGrade = profile.grade;
+            if (!finalGrade || finalGrade === "null" || finalGrade === "undefined") finalGrade = "11";
+
+            const payload = {
+                user_id: user?.uid,
+                title: generated.title || "Untitled Pack",
+                subject: generated.subject || "General",
+                grade: finalGrade,
                 content_type: "text",
                 source_url: null,
-                notes: generated.notes,
+                notes: generated.notes || "",
                 flashcards: generated.flashcards.map(f => ({ ...f, id: generateId(), mastered: false })),
                 quizzes: generated.quizzes.map(q => ({ ...q, id: generateId() })),
                 is_offline: false,
-                suggested_questions: generated.suggestedQuestions,
+                suggested_questions: generated.suggestedQuestions || [],
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
             };
 
-            console.log("Saving to Supabase...");
-            let { data, error } = await supabase.from("study_packs").insert(payload).select().single();
+            const docRef = await addDoc(collection(db, "study_packs"), payload);
 
-            if (error) {
-                console.error("Supabase Error:", error);
-                if (error.message?.includes("suggested_questions")) {
-                    console.log("Retrying without suggested_questions column...");
-                    delete payload.suggested_questions;
-                    const retry = await supabase.from("study_packs").insert(payload).select().single();
-                    data = retry.data;
-                    error = retry.error;
-                }
-            }
-
-            if (error) throw error;
-            console.log("Successfully saved pack:", data?.id);
+            // Update stats
+            const newXp = (profile.xp || 0) + 50;
+            const newDataSaved = (profile.data_saved_mb || 0) + 15;
+            await updateProfile({
+                xp: newXp,
+                data_saved_mb: newDataSaved
+            });
 
             setTopicQuery("");
             setCreateType(null);
@@ -177,7 +269,7 @@ export function StudyPackCreator({ isOpen, onClose, onSuccess }: StudyPackCreato
 
             if (onSuccess) onSuccess();
 
-            router.push(`/study/${data.id}`);
+            router.push(`/study/${docRef.id}`);
 
         } catch (error: any) {
             console.error("Topic generation error:", error);
@@ -192,10 +284,21 @@ export function StudyPackCreator({ isOpen, onClose, onSuccess }: StudyPackCreato
             isOpen={isOpen}
             onClose={() => {
                 onClose();
-                setTimeout(() => setCreateType(null), 300);
+                setTimeout(() => {
+                    setCreateType(null);
+                    setSelectedFileName(null);
+                }, 300);
             }}
             title={createType ? `Add ${createType === "youtube" ? "YouTube Video" : createType === "pdf" ? "PDF" : createType === "topic" ? "Search Topic" : "Text"}` : "Create Study Pack"}
         >
+            <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".pdf"
+                className="hidden"
+            />
+
             {!createType ? (
                 <div className="space-y-3">
                     <p className="text-[var(--text-secondary)] mb-4">
@@ -237,9 +340,9 @@ export function StudyPackCreator({ isOpen, onClose, onSuccess }: StudyPackCreato
                             <FileText className="text-orange-500" size={24} />
                         </div>
                         <div className="text-left">
-                            <p className="font-semibold">Upload PDF</p>
+                            <p className="font-semibold">PDF File / Document</p>
                             <p className="text-sm text-[var(--text-muted)]">
-                                Use text from past papers or textbooks
+                                Upload file or past paper
                             </p>
                         </div>
                     </button>
@@ -262,7 +365,7 @@ export function StudyPackCreator({ isOpen, onClose, onSuccess }: StudyPackCreato
                 <div className="space-y-4">
                     <Input
                         label="Search Topic"
-                        placeholder="e.g., Photosynthesis, Quadratic Equations, French Revolution"
+                        placeholder="e.g., Photosynthesis, Quadratic Equations..."
                         value={topicQuery}
                         onChange={(e) => setTopicQuery(e.target.value)}
                         leftIcon={<Search size={18} />}
@@ -280,13 +383,7 @@ export function StudyPackCreator({ isOpen, onClose, onSuccess }: StudyPackCreato
                     >
                         {isGenerating ? "Generating..." : "Generate Study Pack"}
                     </Button>
-                    <Button
-                        variant="ghost"
-                        fullWidth
-                        onClick={() => setCreateType(null)}
-                    >
-                        Back
-                    </Button>
+                    <Button variant="ghost" fullWidth onClick={() => setCreateType(null)}>Back</Button>
                 </div>
             ) : createType === "youtube" ? (
                 <div className="space-y-4">
@@ -307,49 +404,85 @@ export function StudyPackCreator({ isOpen, onClose, onSuccess }: StudyPackCreato
                     >
                         {isGenerating ? "Processing..." : "Generate Study Pack"}
                     </Button>
-                    <Button
-                        variant="ghost"
-                        fullWidth
-                        onClick={() => setCreateType(null)}
-                    >
-                        Back
-                    </Button>
+                    <Button variant="ghost" fullWidth onClick={() => setCreateType(null)}>Back</Button>
                 </div>
             ) : createType === "pdf" ? (
                 <div className="space-y-4">
-                    <div className="p-4 border-2 border-dashed border-[var(--accent-cyan)]/20 rounded-xl bg-[var(--accent-cyan)]/5 flex flex-col items-center justify-center text-center">
-                        <FileText className="text-[var(--accent-cyan)] mb-2" size={32} />
-                        <p className="text-sm font-medium">Extracting text from PDFs...</p>
-                        <p className="text-xs text-[var(--text-muted)] mt-1">Paste the key text from your PDF below for high-quality notes</p>
+                    {selectedFileName ? (
+                        <div className="p-4 border-2 border-[var(--accent-cyan)] bg-[var(--accent-cyan)]/5 rounded-xl flex items-center justify-between">
+                            <div className="flex items-center gap-3 overflow-hidden">
+                                <FileText className="text-[var(--accent-cyan)] flex-shrink-0" size={24} />
+                                <div className="overflow-hidden">
+                                    <p className="text-sm font-medium truncate">{selectedFileName}</p>
+                                    <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Ready to Generate</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setSelectedFileName(null);
+                                    setTextContent("");
+                                }}
+                                className="p-1 hover:bg-white/10 rounded-full text-white/50"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={handleFileSelect}
+                            disabled={isExtracting}
+                            className="w-full p-8 border-2 border-dashed border-[var(--accent-cyan)]/30 rounded-xl bg-[var(--accent-cyan)]/5 flex flex-col items-center justify-center text-center hover:bg-[var(--accent-cyan)]/10 transition-all group"
+                        >
+                            {isExtracting ? (
+                                <Loader2 className="text-[var(--accent-cyan)] animate-spin mb-4" size={40} />
+                            ) : (
+                                <Upload className="text-[var(--accent-cyan)] mb-4 group-hover:scale-110 transition-transform" size={40} />
+                            )}
+                            <p className="text-sm font-bold">{isExtracting ? "Extracting Content..." : "Choose PDF from Device"}</p>
+                            <p className="text-xs text-[var(--text-muted)] mt-2">Max 30 pages supported</p>
+                        </button>
+                    )}
+
+                    <div className="relative py-2">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t border-[var(--text-muted)]/20"></span>
+                        </div>
+                        <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest">
+                            <span className="bg-[#0f172a] px-3 text-[var(--text-muted)]">or use URL / Paste</span>
+                        </div>
                     </div>
-                    <textarea
-                        className="w-full h-32 glass-card p-4 rounded-xl text-sm outline-none focus:border-[var(--accent-cyan)]/50 transition-colors bg-white/5"
-                        placeholder="Paste PDF text content here..."
-                        value={topicQuery}
-                        onChange={(e) => setTopicQuery(e.target.value)}
+
+                    <Input
+                        placeholder="Paste PDF public URL..."
+                        value={pdfUrl}
+                        onChange={(e) => setPdfUrl(e.target.value)}
+                        leftIcon={<FileText size={16} />}
+                        className="text-xs"
                     />
+
+                    <textarea
+                        className="w-full h-24 glass-card p-3 rounded-xl text-xs outline-none focus:border-[var(--accent-cyan)]/50 transition-colors bg-white/5 resize-none"
+                        placeholder="Alternatively, paste text from your PDF here..."
+                        value={textContent}
+                        onChange={(e) => setTextContent(e.target.value)}
+                    />
+
                     <Button
                         variant="primary"
                         fullWidth
-                        disabled={!topicQuery.trim() || isGenerating}
+                        disabled={(!pdfUrl && !textContent.trim() && !selectedFileName) || isGenerating || isExtracting}
                         isLoading={isGenerating}
-                        onClick={handleTopicGenerate}
+                        onClick={handleGenerate}
                         rightIcon={<Sparkles size={18} />}
                     >
-                        {isGenerating ? "Analyzing..." : "Generate from PDF"}
+                        {isGenerating ? "Analyzing Content..." : "Generate Study Pack"}
                     </Button>
-                    <Button
-                        variant="ghost"
-                        fullWidth
-                        onClick={() => setCreateType(null)}
-                    >
-                        Back
-                    </Button>
+                    <Button variant="ghost" fullWidth onClick={() => setCreateType(null)}>Back</Button>
                 </div>
             ) : (
                 <div className="space-y-4">
                     <textarea
-                        className="input min-h-[150px]"
+                        className="w-full h-48 glass-card p-4 rounded-xl text-sm outline-none focus:border-[var(--accent-cyan)]/50 transition-colors bg-white/5"
                         placeholder="Paste your notes or study content here..."
                         value={textContent}
                         onChange={(e) => setTextContent(e.target.value)}
@@ -364,13 +497,7 @@ export function StudyPackCreator({ isOpen, onClose, onSuccess }: StudyPackCreato
                     >
                         {isGenerating ? "Processing..." : "Generate Study Pack"}
                     </Button>
-                    <Button
-                        variant="ghost"
-                        fullWidth
-                        onClick={() => setCreateType(null)}
-                    >
-                        Back
-                    </Button>
+                    <Button variant="ghost" fullWidth onClick={() => setCreateType(null)}>Back</Button>
                 </div>
             )}
         </BottomSheet>

@@ -3,6 +3,7 @@ import { Inter, Merriweather } from "next/font/google";
 import { DataSaverProvider } from "@/contexts/DataSaverContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CreationProvider } from "@/contexts/CreationContext";
+import { NetworkDebugger } from "@/components/layout/NetworkDebugger";
 import "./globals.css";
 
 // UI Font - Clean and modern for interface elements
@@ -38,35 +39,6 @@ export const metadata: Metadata = {
   authors: [{ name: "Team Lucid Edge" }],
   creator: "Team Lucid Edge",
   publisher: "SyllabiQ",
-  manifest: "/manifest.json",
-  icons: {
-    icon: "/favicon.ico",
-  },
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "SyllabiQ",
-  },
-  formatDetection: {
-    telephone: false,
-  },
-  openGraph: {
-    type: "website",
-    locale: "en_US",
-    siteName: "SyllabiQ",
-    title: "SyllabiQ - Smart Study Companion",
-    description:
-      "Convert YouTube videos, PDFs, and text into syllabus-aligned study materials. Works offline!",
-  },
-};
-
-export const viewport: Viewport = {
-  themeColor: "#000510",
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -92,23 +64,10 @@ export default function RootLayout({
           <DataSaverProvider>
             <CreationProvider>
               {children}
+              <NetworkDebugger />
             </CreationProvider>
           </DataSaverProvider>
         </AuthProvider>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').then(
-                    function(registration) { console.log('SW registered: ', registration.scope); },
-                    function(err) { console.log('SW registration failed: ', err); }
-                  );
-                });
-              }
-            `,
-          }}
-        />
       </body>
     </html>
   );

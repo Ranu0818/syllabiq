@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { GraduationCap, BookOpen, ChevronRight, ChevronLeft, Check } from "lucide-react";
-import { Button, Card } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { useAuth } from "@/contexts/AuthContext";
 import { GRADE_LEVELS, STUDY_STREAMS } from "@/lib/utils";
 import { DataSaverToggle } from "@/components/layout/DataSaverToggle";
@@ -74,7 +74,7 @@ export default function OnboardingPage() {
             <div className="w-full max-w-md">
                 {/* Progress Indicator */}
                 <div className="flex items-center justify-center gap-2 mb-8">
-                    {["grade", "stream", "complete"].map((s, i) => {
+                    {["grade", "stream", "complete"].map((s) => {
                         const isActive = step === s;
                         const isPast =
                             (s === "grade" && (step === "stream" || step === "complete")) ||

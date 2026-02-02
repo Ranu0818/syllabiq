@@ -49,6 +49,7 @@ export interface StudyPack {
     updated_at: string;
     is_offline: boolean;
     suggested_questions?: string[];
+    suggestedQuestions?: string[];
 }
 
 export interface Flashcard {

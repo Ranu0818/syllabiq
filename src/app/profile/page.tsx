@@ -2,14 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
     User,
     LogOut,
     ChevronRight,
     GraduationCap,
-    BookOpen,
-    Download,
     Moon,
     Bell,
     HelpCircle,
@@ -22,7 +21,8 @@ import { Modal } from "@/components/ui/Modal";
 import { useDataSaver } from "@/contexts/DataSaverContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { GRADE_LEVELS, STUDY_STREAMS } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
+import { collection, query, where, deleteDoc, getDocs, getCountFromServer } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const menuItems = [
     { icon: Bell, label: "Notifications", value: "" },
@@ -54,13 +54,13 @@ export default function ProfilePage() {
 
         setIsDeleting(true);
         try {
-            // Delete study packs
-            const { error: deleteError } = await supabase
-                .from("study_packs")
-                .delete()
-                .eq("user_id", user?.id);
+            if (!user) throw new Error("No user logged in");
 
-            if (deleteError) throw deleteError;
+            // Delete study packs from Firebase
+            const q = query(collection(db, "study_packs"), where("user_id", "==", user.uid));
+            const querySnapshot = await getDocs(q);
+            const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+            await Promise.all(deletePromises);
 
             // Reset profile stats and settings
             const { error: updateError } = await updateProfile({
@@ -90,13 +90,12 @@ export default function ProfilePage() {
     useEffect(() => {
         const fetchStats = async () => {
             if (!user) return;
-            const { count, error } = await supabase
-                .from("study_packs")
-                .select("*", { count: 'exact', head: true })
-                .eq("user_id", user.id);
-
-            if (!error) {
-                setPackCount(count);
+            try {
+                const q = query(collection(db, "study_packs"), where("user_id", "==", user.uid));
+                const snapshot = await getCountFromServer(q);
+                setPackCount(snapshot.data().count);
+            } catch (err) {
+                console.error("Error fetching pack count:", err);
             }
         };
 
@@ -160,10 +159,13 @@ export default function ProfilePage() {
                 >
                     <div className="w-24 h-24 mx-auto rounded-full bg-[var(--glass-bg)] border-2 border-[var(--accent-cyan)] flex items-center justify-center mb-4 overflow-hidden">
                         {profile?.avatar_url ? (
-                            <img
+                            <Image
                                 src={profile.avatar_url}
                                 alt={profile.full_name || "User"}
+                                width={96}
+                                height={96}
                                 className="w-full h-full object-cover"
+                                unoptimized
                             />
                         ) : (
                             <User size={40} className="text-[var(--accent-cyan)]" />

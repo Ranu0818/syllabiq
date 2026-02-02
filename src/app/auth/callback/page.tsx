@@ -2,50 +2,29 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Prevent static pre-rendering
 export const dynamic = "force-dynamic";
 
 export default function AuthCallbackPage() {
     const router = useRouter();
+    const { isAuthenticated, isLoading, profile } = useAuth();
 
     useEffect(() => {
-        const handleCallback = async () => {
-            try {
-                // Get the code from URL
-                const { data, error } = await supabase.auth.getSession();
+        if (isLoading) return;
 
-                if (error) {
-                    console.error("Auth callback error:", error);
-                    router.push("/auth/login?error=callback_failed");
-                    return;
-                }
-
-                if (data.session) {
-                    // Check if user has completed onboarding
-                    const { data: profile } = await supabase
-                        .from("profiles")
-                        .select("onboarding_complete")
-                        .eq("id", data.session.user.id)
-                        .single();
-
-                    if (profile && !profile.onboarding_complete) {
-                        router.push("/auth/onboarding");
-                    } else {
-                        router.push("/");
-                    }
-                } else {
-                    router.push("/auth/login");
-                }
-            } catch (err) {
-                console.error("Callback processing error:", err);
-                router.push("/auth/login?error=unknown");
+        if (isAuthenticated) {
+            // Check if user has completed onboarding
+            if (profile && !profile.onboarding_complete) {
+                router.push("/auth/onboarding");
+            } else {
+                router.push("/");
             }
-        };
-
-        handleCallback();
-    }, [router]);
+        } else {
+            router.push("/auth/login");
+        }
+    }, [isAuthenticated, isLoading, profile, router]);
 
     return (
         <div className="min-h-screen flex items-center justify-center">

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, ChevronRight, Mail, Lock, User, ArrowLeft, LogIn } from "lucide-react";
+import { Sparkles, Mail, Lock, User, ArrowLeft, LogIn } from "lucide-react";
 import { Button, Card, Input } from "@/components/ui";
 import { useAuth } from "@/contexts/AuthContext";
 import { DataSaverToggle } from "@/components/layout/DataSaverToggle";
@@ -62,7 +62,7 @@ export default function LoginPage() {
             } else {
                 router.push("/");
             }
-        } catch (err: any) {
+        } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             setError(err.message);
         } finally {
             setIsProcessing(false);
