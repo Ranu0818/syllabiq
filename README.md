@@ -6,7 +6,7 @@
 
 ## 🔗 Project Links
 - **Live Demo:** [🚀 Click here to visit SyllabiQ](https://syllabiq.netlify.app)
-- **Demo Video:** [📺 Watch our Video Demo](https://youtube.com/...)
+- **Demo Video:** [📺 Watch our Video Demo](https://app.supademo.com/demo/cml62098k4sq8zsade3xhl438?utm_source=link)
 
 ---
 
