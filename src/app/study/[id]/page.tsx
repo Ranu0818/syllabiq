@@ -24,12 +24,15 @@ import { StudyPack } from "@/lib/supabase"; // For types
 import { askFollowUpAction } from "@/app/actions/ai";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "react-hot-toast";
 
 type Tab = "notes" | "flashcards" | "quiz";
 
 export default function StudyPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const router = useRouter();
+    const { updateProfile, profile } = useAuth();
 
 
     const [pack, setPack] = useState<StudyPack | null>(null);
@@ -503,6 +506,12 @@ export default function StudyPage({ params }: { params: Promise<{ id: string }> 
                                                             setIsAnswered(false);
                                                         } else {
                                                             setQuizComplete(true);
+                                                            // Calculate and award XP
+                                                            const xpEarned = score * 10;
+                                                            if (xpEarned > 0) {
+                                                                updateProfile({ xp: (profile?.xp || 0) + xpEarned });
+                                                                toast.success(`Quiz Complete! +${xpEarned} XP`);
+                                                            }
                                                         }
                                                     }}
                                                 >

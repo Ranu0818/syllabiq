@@ -59,30 +59,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 const profileObj = docSnap.data() as UserProfile;
 
                 // Streak Logic
-                const lastUpdateStr = profileObj.updated_at || profileObj.created_at;
-                const lastUpdate = lastUpdateStr ? new Date(lastUpdateStr) : new Date();
                 const today = new Date();
+                const lastActiveStr = profileObj.last_active_date || profileObj.updated_at || profileObj.created_at;
+                const lastActive = lastActiveStr ? new Date(lastActiveStr) : new Date();
 
-                if (!isNaN(lastUpdate.getTime())) {
-                    const isSameDay = lastUpdate.getDate() === today.getDate() &&
-                        lastUpdate.getMonth() === today.getMonth() &&
-                        lastUpdate.getFullYear() === today.getFullYear();
+                if (!isNaN(lastActive.getTime())) {
+                    const isSameDay = lastActive.getDate() === today.getDate() &&
+                        lastActive.getMonth() === today.getMonth() &&
+                        lastActive.getFullYear() === today.getFullYear();
 
                     if (!isSameDay) {
                         const yesterday = new Date();
                         yesterday.setDate(yesterday.getDate() - 1);
-                        const isConsecutive = lastUpdate.getDate() === yesterday.getDate() &&
-                            lastUpdate.getMonth() === yesterday.getMonth() &&
-                            lastUpdate.getFullYear() === yesterday.getFullYear();
+                        const isConsecutive = lastActive.getDate() === yesterday.getDate() &&
+                            lastActive.getMonth() === yesterday.getMonth() &&
+                            lastActive.getFullYear() === yesterday.getFullYear();
 
+                        // If consecutive, increment. If not consecutive (and not same day), reset to 1.
+                        // EXCEPT if it's the very first login (no last_active_date but created_at is old), allow reset.
+                        // For simplicity: if missed a day, reset.
                         const newStreak = isConsecutive ? (profileObj.streak || 0) + 1 : 1;
 
                         // Update DB
                         await updateDoc(docRef, {
                             streak: newStreak,
+                            last_active_date: today.toISOString(),
                             updated_at: today.toISOString()
                         });
                         profileObj.streak = newStreak;
+                        profileObj.last_active_date = today.toISOString();
+                    } else if (!profileObj.last_active_date) {
+                        // Same day, but migration needed (add last_active_date)
+                        await updateDoc(docRef, {
+                            last_active_date: today.toISOString()
+                        });
+                        profileObj.last_active_date = today.toISOString();
                     }
                 }
 

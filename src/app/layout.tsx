@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Merriweather } from "next/font/google";
+import { Toaster } from "react-hot-toast";
 import { DataSaverProvider } from "@/contexts/DataSaverContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CreationProvider } from "@/contexts/CreationContext";
@@ -65,6 +66,7 @@ export default function RootLayout({
             <CreationProvider>
               {children}
               <NetworkDebugger />
+              <Toaster position="top-right" />
             </CreationProvider>
           </DataSaverProvider>
         </AuthProvider>

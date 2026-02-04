@@ -32,6 +32,7 @@ export interface UserProfile {
     streak: number;
     xp: number;
     data_saved_mb: number;
+    last_active_date?: string;
 }
 
 export interface StudyPack {
