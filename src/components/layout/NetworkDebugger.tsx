@@ -25,12 +25,12 @@ export function NetworkDebugger() {
     if (!isOffline) return null; // Hide if online
 
     return (
-        <div className="fixed bottom-4 right-4 z-[9999] max-w-sm">
-            <div className="p-4 rounded-xl border shadow-2xl backdrop-blur-md flex items-start gap-3 bg-yellow-500/10 border-yellow-500/20 text-yellow-200">
-                <div className="mt-1">
+        <div className="network-debugger fixed left-1/2 -translate-x-1/2 transform md:left-auto md:right-4 z-50 w-[90%] sm:max-w-sm">
+            <div className="p-4 rounded-xl border shadow-2xl backdrop-blur-md flex items-start gap-3 bg-yellow-500/10 border-yellow-500/20 text-yellow-200 pointer-events-none">
+                <div className="mt-1 pointer-events-none">
                     <WifiOff size={20} />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 pointer-events-none">
                     <h3 className="font-bold text-sm mb-1">
                         You are Offline
                     </h3>
@@ -39,7 +39,7 @@ export function NetworkDebugger() {
                     </p>
                     <button
                         onClick={() => window.location.reload()}
-                        className="text-xs font-bold uppercase tracking-wider bg-white/10 px-2 py-1 rounded hover:bg-white/20 transition-colors flex items-center gap-1"
+                        className="text-xs font-bold uppercase tracking-wider bg-white/10 px-2 py-1 rounded hover:bg-white/20 transition-colors flex items-center gap-1 pointer-events-auto"
                     >
                         <RefreshCw size={12} /> Reload
                     </button>

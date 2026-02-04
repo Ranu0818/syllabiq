@@ -20,6 +20,7 @@ import { generateId } from "@/lib/utils";
 import { generateStudyPackAction, generateFromTopicAction } from "@/app/actions/ai";
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { saveStudyPackToIDB } from "@/lib/idb";
 
 // Import pdfjs for client-side extraction
 import * as pdfjsLib from 'pdfjs-dist';
@@ -173,9 +174,30 @@ export function StudyPackCreator({ isOpen, onClose, onSuccess }: StudyPackCreato
                 updated_at: new Date().toISOString(),
             };
 
-            console.log("Saving to Firestore...");
-            const docRef = await addDoc(collection(db, "study_packs"), payload);
-            console.log("Successfully saved manual pack:", docRef.id);
+            console.log("Attempting to save to Firestore...");
+            // Pre-generate a local id in case we need to save locally
+            const localId = generateId();
+            payload.id = localId;
+
+            try {
+                const docRef = await addDoc(collection(db, "study_packs"), payload);
+                console.log("Successfully saved manual pack to Firestore:", docRef.id);
+
+                // Save synced copy to IndexedDB with server id
+                const syncedPayload = { ...payload, id: docRef.id, is_offline: false };
+                await saveStudyPackToIDB(syncedPayload);
+
+                // Navigate to the new study pack
+                router.push(`/study/${docRef.id}`);
+            } catch (err) {
+                console.warn("Firestore save failed, saving pack to IndexedDB for offline:", err);
+                payload.is_offline = true;
+                await saveStudyPackToIDB(payload);
+                alert("You're offline — the study pack was saved locally and will sync when you're back online.");
+
+                // Navigate to library so the user can find the offline pack
+                router.push('/library');
+            }
 
             // Update user stats (XP + Data Saved)
             const newXp = (profile.xp || 0) + 50; // 50 XP per pack
@@ -195,9 +217,6 @@ export function StudyPackCreator({ isOpen, onClose, onSuccess }: StudyPackCreato
             onClose();
 
             if (onSuccess) onSuccess();
-
-            // Navigate to the new study pack
-            router.push(`/study/${docRef.id}`);
 
         } catch (error: any) {
             console.error("Manual generation error:", error);
@@ -253,23 +272,53 @@ export function StudyPackCreator({ isOpen, onClose, onSuccess }: StudyPackCreato
                 updated_at: new Date().toISOString(),
             };
 
-            const docRef = await addDoc(collection(db, "study_packs"), payload);
+            // Pre-generate a local id in case we need to save locally
+            const localId = generateId();
+            payload.id = localId;
 
-            // Update stats
-            const newXp = (profile.xp || 0) + 50;
-            const newDataSaved = (profile.data_saved_mb || 0) + 15;
-            await updateProfile({
-                xp: newXp,
-                data_saved_mb: newDataSaved
-            });
+            try {
+                const docRef = await addDoc(collection(db, "study_packs"), payload);
+                // Save synced copy to IndexedDB with server id
+                const syncedPayload = { ...payload, id: docRef.id, is_offline: false };
+                await saveStudyPackToIDB(syncedPayload);
 
-            setTopicQuery("");
-            setCreateType(null);
-            onClose();
+                // Update stats
+                const newXp = (profile.xp || 0) + 50;
+                const newDataSaved = (profile.data_saved_mb || 0) + 15;
+                await updateProfile({
+                    xp: newXp,
+                    data_saved_mb: newDataSaved
+                });
 
-            if (onSuccess) onSuccess();
+                setTopicQuery("");
+                setCreateType(null);
+                onClose();
 
-            router.push(`/study/${docRef.id}`);
+                if (onSuccess) onSuccess();
+
+                router.push(`/study/${docRef.id}`);
+            } catch (err) {
+                console.warn("Firestore save failed, saving pack to IndexedDB for offline:", err);
+                payload.is_offline = true;
+                await saveStudyPackToIDB(payload);
+                alert("You're offline — the study pack was saved locally and will sync when you're back online.");
+
+                // Update stats locally where possible
+                const newXp = (profile.xp || 0) + 50;
+                const newDataSaved = (profile.data_saved_mb || 0) + 15;
+                await updateProfile({
+                    xp: newXp,
+                    data_saved_mb: newDataSaved
+                });
+
+                setTopicQuery("");
+                setCreateType(null);
+                onClose();
+
+                if (onSuccess) onSuccess();
+
+                router.push('/library');
+            }
 
         } catch (error: any) {
             console.error("Topic generation error:", error);

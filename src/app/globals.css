@@ -560,6 +560,18 @@ body::before {
   background: rgba(0, 212, 255, 0.1);
 }
 
+/* Network Debugger: position above bottom nav and avoid covering bottom controls on small screens */
+.network-debugger {
+  bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 16px);
+}
+@media (max-width: 640px) {
+  .network-debugger {
+    /* add extra gap on small screens to avoid overlapping action buttons (quiz/flashcard next buttons) */
+    bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 88px);
+  }
+}
+}
+
 .bottom-nav-item span {
   font-size: 11px;
   font-weight: 500;
