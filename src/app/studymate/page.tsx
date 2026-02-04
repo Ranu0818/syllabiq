@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, Send, Sparkles, Loader2 } from "lucide-react";
+import { MessageCircle, Send, Sparkles, Loader2, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { Card } from "@/components/ui";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, query, where, getDocs, orderBy } from "firebase/firestore";
+import { collection, addDoc, query, where, getDocs, orderBy, writeBatch, doc } from "firebase/firestore";
 import { askStudyMateAction } from "@/app/actions/ai";
 import { cleanupOldMessages } from "@/lib/cleanup";
 
@@ -135,6 +135,32 @@ export default function StudyMatePage() {
         }
     };
 
+    const handleClearChat = async () => {
+        if (!user || messages.length === 0) return;
+
+        if (!window.confirm("Are you sure you want to clear your chat history? This cannot be undone.")) {
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const batch = writeBatch(db);
+            messages.forEach(msg => {
+                if (msg.id) {
+                    const ref = doc(db, "chat_messages", msg.id);
+                    batch.delete(ref);
+                }
+            });
+            await batch.commit();
+            setMessages([]);
+        } catch (error) {
+            console.error("Error clearing chat:", error);
+            alert("Failed to clear chat history. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleKeyPress = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -159,17 +185,30 @@ export default function StudyMatePage() {
                 <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-3 mb-6"
+                    className="flex items-center justify-between mb-6"
                 >
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--accent-cyan)] to-purple-500 flex items-center justify-center">
-                        <MessageCircle className="text-white" size={24} />
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--accent-cyan)] to-purple-500 flex items-center justify-center">
+                            <MessageCircle className="text-white" size={24} />
+                        </div>
+                        <div>
+                            <h1 className="heading-2">AI Study Mate 🤖</h1>
+                            <p className="text-xs text-[var(--text-muted)]">
+                                Grade {profile?.grade || '?'}{profile?.stream ? ` • ${profile.stream}` : ''} • Sri Lankan Curriculum
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="heading-2">AI Study Mate 🤖</h1>
-                        <p className="text-xs text-[var(--text-muted)]">
-                            Grade {profile?.grade || '?'}{profile?.stream ? ` • ${profile.stream}` : ''} • Sri Lankan Curriculum
-                        </p>
-                    </div>
+
+                    {messages.length > 0 && (
+                        <button
+                            onClick={handleClearChat}
+                            disabled={isLoading}
+                            className="p-2 text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                            title="Clear Chat History"
+                        >
+                            <Trash2 size={20} />
+                        </button>
+                    )}
                 </motion.div>
 
                 {/* Chat Messages */}
@@ -196,8 +235,8 @@ export default function StudyMatePage() {
                                     >
                                         <div
                                             className={`max-w-[80%] rounded-2xl px-4 py-3 ${msg.role === 'user'
-                                                    ? 'bg-gradient-to-r from-[var(--accent-cyan)] to-purple-500 text-white'
-                                                    : 'glass-card border border-[var(--glass-border)]'
+                                                ? 'bg-gradient-to-r from-[var(--accent-cyan)] to-purple-500 text-white'
+                                                : 'glass-card border border-[var(--glass-border)]'
                                                 }`}
                                         >
                                             <p className="text-sm whitespace-pre-wrap break-words">

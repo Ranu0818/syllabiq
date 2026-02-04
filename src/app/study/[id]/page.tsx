@@ -339,7 +339,7 @@ export default function StudyPage({ params }: { params: Promise<{ id: string }> 
                                             transition={{ type: "spring", stiffness: 260, damping: 20 }}
                                         >
                                             {/* Front */}
-                                            <Card className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-8 text-center bg-gradient-to-br from-[var(--glass-bg)] to-[rgba(0,212,255,0.05)] border-[var(--accent-cyan)]/30">
+                                            <Card variant="static" className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-8 text-center bg-gradient-to-br from-[var(--glass-bg)] to-[rgba(0,212,255,0.05)] border-[var(--accent-cyan)]/30">
                                                 <div className="mb-4 p-3 rounded-full bg-[rgba(0,212,255,0.1)]">
                                                     <Star className="text-[var(--accent-cyan)]" size={24} />
                                                 </div>
@@ -352,7 +352,7 @@ export default function StudyPage({ params }: { params: Promise<{ id: string }> 
                                             </Card>
 
                                             {/* Back */}
-                                            <Card className="absolute inset-0 backface-hidden rotate-y-180 flex flex-col items-center justify-center p-8 text-center bg-gradient-to-br from-[var(--glass-bg)] to-[rgba(255,215,0,0.05)] border-[var(--secondary-gold)]/30">
+                                            <Card variant="static" className="absolute inset-0 backface-hidden rotate-y-180 flex flex-col items-center justify-center p-8 text-center bg-gradient-to-br from-[var(--glass-bg)] to-[rgba(255,215,0,0.05)] border-[var(--secondary-gold)]/30">
                                                 <p className="text-sm text-[var(--secondary-gold)] uppercase tracking-widest font-bold mb-4">Answer</p>
                                                 <h3 className="heading-3 text-white">
                                                     {pack.flashcards[currentCardIndex].answer}

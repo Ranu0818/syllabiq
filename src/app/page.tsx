@@ -145,7 +145,7 @@ export default function HomePage() {
 
   return (
     <AppShell onSuccess={fetchRecentPacks}>
-      <div className="container py-6">
+      <div className="container md:max-w-6xl py-6">
         {/* Premium Welcome Hero Card */}
         {isAuthenticated && profile ? (
           <motion.div
@@ -239,8 +239,8 @@ export default function HomePage() {
             </div>
             <input
               type="text"
-              placeholder="What do you want to learn today?"
-              className="w-full pl-12 pr-28 py-4 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl focus:outline-none focus:border-[var(--accent-cyan)]/50 focus:ring-1 focus:ring-[var(--accent-cyan)]/20 transition-all text-sm font-medium"
+              placeholder="What do you want to learn today? (e.g. Photosynthesis, World War II)"
+              className="w-full !pl-14 pr-28 py-4 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl focus:outline-none focus:border-[var(--accent-cyan)]/50 focus:ring-1 focus:ring-[var(--accent-cyan)]/20 transition-all text-sm font-medium"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -280,7 +280,7 @@ export default function HomePage() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
-            className="grid grid-cols-2 gap-3 mb-8"
+            className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8"
           >
             {/* Cell 1: Total Packs */}
             <Card className="p-4 bg-gradient-to-br from-[rgba(0,212,255,0.05)] to-transparent border-[var(--accent-cyan)]/20">
@@ -316,35 +316,35 @@ export default function HomePage() {
               </div>
             </Card>
 
-            {/* Cell 3: Data Saved (Wide) */}
-            <Card className="col-span-2 p-4 flex items-center justify-between bg-[rgba(255,255,255,0.02)]">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-emerald-500/10">
+            {/* Cell 3: Data Saved (Wide on Mobile, Single on Desktop) */}
+            <Card className="col-span-2 md:col-span-1 p-4 flex md:flex-col items-center md:items-start justify-between md:justify-end bg-[rgba(255,255,255,0.02)]">
+              <div className="flex md:flex-col items-center md:items-start gap-3 md:gap-2 mb-0 md:mb-3">
+                <div className="p-3 md:p-2 rounded-xl bg-emerald-500/10">
                   <Zap className="text-emerald-400" size={24} />
                 </div>
                 <div>
-                  <p className="text-lg font-bold">{profile?.data_saved_mb || 0} MB</p>
-                  <p className="text-xs text-[var(--text-muted)]">Data Saved This Week</p>
+                  <p className="text-lg md:text-2xl font-bold">{profile?.data_saved_mb || 0} <span className="text-sm px-0">MB</span></p>
+                  <p className="text-xs text-[var(--text-muted)]">Data Saved</p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full">
+              <div className="text-right md:text-left">
+                <p className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full inline-block">
                   +12% EFFICIENCY
                 </p>
               </div>
             </Card>
 
-            {/* Cell 4: Rank (Small) */}
-            <Card className="col-span-2 p-4 flex items-center gap-4 border-dashed">
+            {/* Cell 4: Rank (Wide on Mobile, Single on Desktop) */}
+            <Card className="col-span-2 md:col-span-1 p-4 flex md:flex-col items-center md:items-start gap-4 md:gap-2 border-dashed">
               <div className="w-10 h-10 rounded-full bg-[var(--glass-bg)] flex items-center justify-center border border-[var(--glass-border)]">
                 <Trophy className="text-[var(--secondary-gold)]" size={20} />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 w-full flex flex-col justify-end">
                 <div className="flex justify-between items-end mb-1">
                   <p className="text-xs font-bold uppercase tracking-widest text-[var(--text-secondary)]">
-                    {profile?.xp && profile.xp >= 100 ? "Advanced Learner" : "Novice Learner"}
+                    {profile?.xp && profile.xp >= 100 ? "Pro" : "Rookie"}
                   </p>
-                  <p className="text-[10px] text-[var(--text-muted)]">{(profile?.xp || 0) % 100}/100 XP</p>
+                  <p className="text-[10px] text-[var(--text-muted)]">{(profile?.xp || 0) % 100}/100</p>
                 </div>
                 <div className="h-1.5 w-full bg-[var(--glass-bg)] rounded-full overflow-hidden">
                   <div
@@ -358,10 +358,10 @@ export default function HomePage() {
         )}
 
         {/* Quick Actions Bento */}
-        <div className="grid grid-cols-2 gap-3 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
           <button
             onClick={() => openCreator(fetchRecentPacks)}
-            className="glass-card-accent p-6 text-left relative overflow-hidden group col-span-2"
+            className="glass-card-accent p-6 text-left relative overflow-hidden group col-span-2 md:col-span-1"
           >
             <div className="relative z-10">
               <Sparkles className="text-[var(--accent-cyan)] mb-3" size={32} />
@@ -373,10 +373,10 @@ export default function HomePage() {
             </div>
           </button>
 
-          <Link href="/studymate" className="glass-card-accent p-6 text-left relative overflow-hidden group col-span-2">
+          <Link href="/studymate" className="glass-card-accent p-6 text-left relative overflow-hidden group col-span-2 md:col-span-1">
             <div className="relative z-10">
               <MessageCircle className="text-[var(--accent-cyan)] mb-3" size={32} />
-              <h3 className="heading-3 mb-1">AI Study Mate 🤖</h3>
+              <h3 className="heading-3 mb-1">AI Study Mate</h3>
               <p className="text-xs text-[var(--text-secondary)]">Get instant help & study tips tailored for you</p>
             </div>
             <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
@@ -384,12 +384,12 @@ export default function HomePage() {
             </div>
           </Link>
 
-          <Link href="/library" className="glass-card p-4 text-left flex flex-col justify-between hover:border-[var(--secondary-gold)] transition-colors">
+          <Link href="/library" className="glass-card p-4 text-left flex flex-col justify-between hover:border-[var(--secondary-gold)] transition-colors md:col-span-1">
             <History className="text-[var(--secondary-gold)] mb-6" size={24} />
             <p className="text-sm font-bold">Past Activity</p>
           </Link>
 
-          <Link href="/progress" className="glass-card p-4 text-left flex flex-col justify-between hover:border-emerald-400 transition-colors">
+          <Link href="/progress" className="glass-card p-4 text-left flex flex-col justify-between hover:border-emerald-400 transition-colors md:col-span-1">
             <Target className="text-emerald-400 mb-6" size={24} />
             <p className="text-sm font-bold">Goal Pursuit</p>
           </Link>
@@ -411,24 +411,6 @@ export default function HomePage() {
                   <h3 className="font-semibold">Save Data</h3>
                   <p className="text-sm text-[var(--text-muted)]">
                     Convert YouTube videos to text notes
-                  </p>
-                </div>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <Card className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-[rgba(255,215,0,0.1)] flex items-center justify-center flex-shrink-0">
-                  <WifiOff className="text-[var(--secondary-gold)]" size={24} />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-semibold">Study Offline</h3>
-                  <p className="text-sm text-[var(--text-muted)]">
-                    Download packs, study without WiFi
                   </p>
                 </div>
               </Card>
@@ -472,10 +454,10 @@ export default function HomePage() {
                 <div className="animate-spin w-6 h-6 border-2 border-[var(--accent-cyan)] border-t-transparent rounded-full" />
               </div>
             ) : recentPacks.length > 0 ? (
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {recentPacks.map((pack) => (
-                  <Link key={pack.id} href={`/study/${pack.id}`}>
-                    <Card className="flex items-center gap-3 hover:border-[var(--accent-cyan)] transition-colors mb-2">
+                  <Link key={pack.id} href={`/study/${pack.id}`} className="h-full">
+                    <Card className="flex items-center gap-3 hover:border-[var(--accent-cyan)] transition-colors h-full hover:bg-white/5">
                       <div className="w-10 h-10 rounded-lg bg-[rgba(0,212,255,0.1)] flex items-center justify-center flex-shrink-0">
                         <FileText className="text-[var(--accent-cyan)]" size={20} />
                       </div>
