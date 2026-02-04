@@ -570,7 +570,6 @@ body::before {
     bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 88px);
   }
 }
-}
 
 .bottom-nav-item span {
   font-size: 11px;

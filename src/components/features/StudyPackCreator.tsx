@@ -177,22 +177,22 @@ export function StudyPackCreator({ isOpen, onClose, onSuccess }: StudyPackCreato
             console.log("Attempting to save to Firestore...");
             // Pre-generate a local id in case we need to save locally
             const localId = generateId();
-            payload.id = localId;
+            const payloadWithId = { ...payload, id: localId };
 
             try {
-                const docRef = await addDoc(collection(db, "study_packs"), payload);
+                const docRef = await addDoc(collection(db, "study_packs"), payloadWithId);
                 console.log("Successfully saved manual pack to Firestore:", docRef.id);
 
                 // Save synced copy to IndexedDB with server id
-                const syncedPayload = { ...payload, id: docRef.id, is_offline: false };
+                const syncedPayload = { ...payloadWithId, id: docRef.id, is_offline: false };
                 await saveStudyPackToIDB(syncedPayload);
 
                 // Navigate to the new study pack
                 router.push(`/study/${docRef.id}`);
             } catch (err) {
                 console.warn("Firestore save failed, saving pack to IndexedDB for offline:", err);
-                payload.is_offline = true;
-                await saveStudyPackToIDB(payload);
+                const offlinePayload = { ...payloadWithId, is_offline: true };
+                await saveStudyPackToIDB(offlinePayload);
                 alert("You're offline — the study pack was saved locally and will sync when you're back online.");
 
                 // Navigate to library so the user can find the offline pack
@@ -274,12 +274,12 @@ export function StudyPackCreator({ isOpen, onClose, onSuccess }: StudyPackCreato
 
             // Pre-generate a local id in case we need to save locally
             const localId = generateId();
-            payload.id = localId;
+            const payloadWithId = { ...payload, id: localId };
 
             try {
-                const docRef = await addDoc(collection(db, "study_packs"), payload);
+                const docRef = await addDoc(collection(db, "study_packs"), payloadWithId);
                 // Save synced copy to IndexedDB with server id
-                const syncedPayload = { ...payload, id: docRef.id, is_offline: false };
+                const syncedPayload = { ...payloadWithId, id: docRef.id, is_offline: false };
                 await saveStudyPackToIDB(syncedPayload);
 
                 // Update stats
@@ -299,8 +299,8 @@ export function StudyPackCreator({ isOpen, onClose, onSuccess }: StudyPackCreato
                 router.push(`/study/${docRef.id}`);
             } catch (err) {
                 console.warn("Firestore save failed, saving pack to IndexedDB for offline:", err);
-                payload.is_offline = true;
-                await saveStudyPackToIDB(payload);
+                const offlinePayload = { ...payloadWithId, is_offline: true };
+                await saveStudyPackToIDB(offlinePayload);
                 alert("You're offline — the study pack was saved locally and will sync when you're back online.");
 
                 // Update stats locally where possible
