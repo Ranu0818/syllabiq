@@ -385,13 +385,33 @@ export default function HomePage() {
           </Link>
 
           <Link href="/library" className="glass-card p-4 text-left flex flex-col justify-between hover:border-[var(--secondary-gold)] transition-colors md:col-span-1">
-            <History className="text-[var(--secondary-gold)] mb-6" size={24} />
-            <p className="text-sm font-bold">Past Activity</p>
+            <div className="flex justify-between items-start">
+              <History className="text-[var(--secondary-gold)] mb-6" size={24} />
+              {recentPacks.length > 0 && (
+                <span className="text-[10px] bg-[var(--secondary-gold)]/10 text-[var(--secondary-gold)] px-1.5 py-0.5 rounded font-bold uppercase">
+                  Latest
+                </span>
+              )}
+            </div>
+            <div>
+              <p className="text-xs text-[var(--text-muted)] mb-1">Past Activity</p>
+              <p className="text-sm font-bold truncate">
+                {recentPacks.length > 0 ? recentPacks[0].title : "Start Studying"}
+              </p>
+            </div>
           </Link>
 
           <Link href="/progress" className="glass-card p-4 text-left flex flex-col justify-between hover:border-emerald-400 transition-colors md:col-span-1">
-            <Target className="text-emerald-400 mb-6" size={24} />
-            <p className="text-sm font-bold">Goal Pursuit</p>
+            <div className="flex justify-between items-start">
+              <Target className="text-emerald-400 mb-6" size={24} />
+              <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded font-bold uppercase">
+                Goal
+              </span>
+            </div>
+            <div>
+              <p className="text-xs text-[var(--text-muted)] mb-1">Weekly Goal</p>
+              <p className="text-xl font-bold text-emerald-400">{goalPercentage}%</p>
+            </div>
           </Link>
         </div>
 

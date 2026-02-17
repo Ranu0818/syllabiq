@@ -83,6 +83,12 @@ export default function LibraryPage() {
         }
     }, [user, isAuthenticated, fetchPacks]);
 
+    const [selectedCategory, setSelectedCategory] = useState("All");
+
+    const filteredPacks = selectedCategory === "All"
+        ? studyPacks
+        : studyPacks.filter(pack => pack.subject === selectedCategory);
+
     return (
         <AppShell onSuccess={fetchPacks}>
             <div className="container py-6">
@@ -98,19 +104,20 @@ export default function LibraryPage() {
                     <div>
                         <h1 className="heading-2">My Library</h1>
                         <p className="text-sm text-[var(--text-muted)]">
-                            {studyPacks.length} study packs
+                            {filteredPacks.length} study packs
                         </p>
                     </div>
                 </motion.div>
 
                 {/* Filter Tabs */}
-                <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-                    {["All", "Biology", "Chemistry", "Physics", "Maths"].map((tab, i) => (
+                <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+                    {["All", "Biology", "Chemistry", "Physics", "Maths"].map((tab) => (
                         <button
                             key={tab}
-                            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${i === 0
-                                ? "bg-[var(--accent-cyan)] text-[var(--primary-bg)]"
-                                : "glass-card text-[var(--text-secondary)] hover:text-[var(--accent-cyan)]"
+                            onClick={() => setSelectedCategory(tab)}
+                            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all border ${selectedCategory === tab
+                                ? "bg-[var(--accent-cyan)] text-[var(--primary-bg)] border-[var(--accent-cyan)] shadow-[0_0_15px_rgba(0,212,255,0.3)]"
+                                : "bg-white/5 border-white/5 text-[var(--text-secondary)] hover:border-[var(--accent-cyan)]/50 hover:text-[var(--accent-cyan)]"
                                 }`}
                         >
                             {tab}
@@ -124,56 +131,67 @@ export default function LibraryPage() {
                         <div className="animate-spin w-8 h-8 border-2 border-[var(--accent-cyan)] border-t-transparent rounded-full" />
                     </div>
                 ) : (
-                    <div className="space-y-4">
-                        {studyPacks.map((pack) => (
-                            <Link key={pack.id} href={`/study/${pack.id}`}>
-                                <Card className="cursor-pointer hover:border-[var(--accent-cyan)] transition-colors">
-                                    <div className="flex items-start justify-between mb-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-lg bg-[rgba(0,212,255,0.1)] flex items-center justify-center">
-                                                <BookOpen className="text-[var(--accent-cyan)]" size={18} />
+                    <motion.div
+                        layout
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                    >
+                        {filteredPacks.map((pack) => (
+                            <Link key={pack.id} href={`/study/${pack.id}`} className="h-full">
+                                <Card className="cursor-pointer hover:border-[var(--accent-cyan)] transition-colors h-full flex flex-col justify-between p-6 hover:bg-white/5 group relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-10 transition-opacity">
+                                        <BookOpen size={80} />
+                                    </div>
+                                    <div className="relative z-10">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-12 h-12 rounded-xl bg-[rgba(0,212,255,0.1)] flex items-center justify-center border border-[var(--accent-cyan)]/20">
+                                                    <BookOpen className="text-[var(--accent-cyan)]" size={24} />
+                                                </div>
+                                                <div>
+                                                    <CardTitle className="text-lg leading-tight mb-1 line-clamp-1" title={pack.title}>{pack.title}</CardTitle>
+                                                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/5 text-[var(--text-muted)] border border-white/10">
+                                                        {pack.subject}
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <CardTitle className="text-base">{pack.title}</CardTitle>
-                                                <p className="text-xs text-[var(--text-muted)]">
-                                                    {pack.subject} • Grade {pack.grade}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
                                             <button
                                                 onClick={(e) => handleDelete(e, pack.id)}
                                                 className={`p-2 rounded-lg transition-all flex items-center gap-1 ${confirmDeleteId === pack.id
                                                     ? "bg-red-500 text-white text-[10px] font-bold px-3 animate-pulse"
-                                                    : "text-[var(--text-muted)] hover:bg-red-500/10 hover:text-red-500"
+                                                    : "text-[var(--text-muted)] hover:bg-red-500/10 hover:text-red-500 opacity-0 group-hover:opacity-100"
                                                     }`}
                                             >
                                                 {confirmDeleteId === pack.id ? (
-                                                    <>
-                                                        <AlertCircle size={14} />
-                                                        CONFIRM?
-                                                    </>
+                                                    <Trash2 size={16} />
                                                 ) : (
                                                     <Trash2 size={18} />
                                                 )}
                                             </button>
-                                            <ChevronRight size={18} className="text-[var(--text-muted)]" />
                                         </div>
+
+                                        <p className="text-sm text-[var(--text-muted)] line-clamp-2 mb-6 h-10">
+                                            {pack.grade ? `Grade ${pack.grade}` : "General Study"} content.
+                                            Includes flashcards and quizzes for revision.
+                                        </p>
                                     </div>
 
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex gap-4 text-xs text-[var(--text-muted)]">
-                                            <span>{pack.flashcards.length} flashcards</span>
-                                            <span>{pack.quizzes.length} quizzes</span>
+                                    <div className="flex items-center justify-between pt-4 border-t border-white/5 relative z-10">
+                                        <div className="flex gap-4 text-xs font-medium text-[var(--text-secondary)]">
+                                            <span className="flex items-center gap-1.5">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-cyan)]" />
+                                                {pack.flashcards.length} Cards
+                                            </span>
+                                            <span className="flex items-center gap-1.5">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-[var(--secondary-gold)]" />
+                                                {pack.quizzes.length} Quiz
+                                            </span>
                                         </div>
-                                        <span className="text-xs text-[var(--text-muted)]">
-                                            {new Date(pack.created_at).toLocaleDateString()}
-                                        </span>
+                                        <ChevronRight size={16} className="text-[var(--text-muted)] group-hover:text-[var(--accent-cyan)] group-hover:translate-x-1 transition-all" />
                                     </div>
                                 </Card>
                             </Link>
                         ))}
-                    </div>
+                    </motion.div>
                 )}
 
                 {/* Empty State (when no packs) */}
