@@ -217,7 +217,7 @@ export default function ProfilePage() {
                         <p className="text-xs text-[var(--text-muted)]">Study Packs</p>
                     </Card>
                     <Card className="text-center" padding="sm">
-                        <p className="heading-3 text-[var(--secondary-gold)]">0</p>
+                        <p className="heading-3 text-[var(--secondary-gold)]">{profile?.streak ?? 0}</p>
                         <p className="text-xs text-[var(--text-muted)]">Quiz Streak</p>
                     </Card>
                 </motion.div>

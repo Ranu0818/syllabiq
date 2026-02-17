@@ -4,7 +4,7 @@ import { Toaster } from "react-hot-toast";
 import { DataSaverProvider } from "@/contexts/DataSaverContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CreationProvider } from "@/contexts/CreationContext";
-import { NetworkDebugger } from "@/components/layout/NetworkDebugger";
+
 import "./globals.css";
 
 // UI Font - Clean and modern for interface elements
@@ -65,7 +65,7 @@ export default function RootLayout({
           <DataSaverProvider>
             <CreationProvider>
               {children}
-              <NetworkDebugger />
+
               <Toaster position="top-right" />
             </CreationProvider>
           </DataSaverProvider>
