@@ -133,60 +133,58 @@ export default function LibraryPage() {
                 ) : (
                     <motion.div
                         layout
-                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                        className="space-y-6"
                     >
                         {filteredPacks.map((pack) => (
-                            <Link key={pack.id} href={`/study/${pack.id}`} className="h-full">
-                                <Card className="cursor-pointer hover:border-[var(--accent-cyan)] transition-colors h-full flex flex-col justify-between p-6 hover:bg-white/5 group relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-10 transition-opacity">
-                                        <BookOpen size={80} />
-                                    </div>
-                                    <div className="relative z-10">
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-12 h-12 rounded-xl bg-[rgba(0,212,255,0.1)] flex items-center justify-center border border-[var(--accent-cyan)]/20">
-                                                    <BookOpen className="text-[var(--accent-cyan)]" size={24} />
-                                                </div>
-                                                <div>
-                                                    <CardTitle className="text-lg leading-tight mb-1 line-clamp-1" title={pack.title}>{pack.title}</CardTitle>
+                            <Link key={pack.id} href={`/study/${pack.id}`}>
+                                <Card className="cursor-pointer hover:border-[var(--accent-cyan)] transition-colors p-5 group">
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 rounded-xl bg-[rgba(0,212,255,0.1)] flex items-center justify-center flex-shrink-0">
+                                                <BookOpen className="text-[var(--accent-cyan)]" size={24} />
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-lg mb-1">{pack.title}</CardTitle>
+                                                <div className="flex items-center gap-2">
                                                     <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/5 text-[var(--text-muted)] border border-white/10">
                                                         {pack.subject}
                                                     </span>
+                                                    <span className="text-xs text-[var(--text-muted)]">• Grade {pack.grade}</span>
                                                 </div>
                                             </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
                                             <button
                                                 onClick={(e) => handleDelete(e, pack.id)}
                                                 className={`p-2 rounded-lg transition-all flex items-center gap-1 ${confirmDeleteId === pack.id
                                                     ? "bg-red-500 text-white text-[10px] font-bold px-3 animate-pulse"
-                                                    : "text-[var(--text-muted)] hover:bg-red-500/10 hover:text-red-500 opacity-0 group-hover:opacity-100"
+                                                    : "text-[var(--text-muted)] hover:bg-red-500/10 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                                                     }`}
                                             >
                                                 {confirmDeleteId === pack.id ? (
                                                     <Trash2 size={16} />
                                                 ) : (
-                                                    <Trash2 size={18} />
+                                                    <Trash2 size={20} />
                                                 )}
                                             </button>
+                                            <ChevronRight size={20} className="text-[var(--text-muted)] group-hover:text-[var(--accent-cyan)] group-hover:translate-x-1 transition-transform" />
                                         </div>
-
-                                        <p className="text-sm text-[var(--text-muted)] line-clamp-2 mb-6 h-10">
-                                            {pack.grade ? `Grade ${pack.grade}` : "General Study"} content.
-                                            Includes flashcards and quizzes for revision.
-                                        </p>
                                     </div>
 
-                                    <div className="flex items-center justify-between pt-4 border-t border-white/5 relative z-10">
-                                        <div className="flex gap-4 text-xs font-medium text-[var(--text-secondary)]">
-                                            <span className="flex items-center gap-1.5">
+                                    <div className="flex items-center justify-between pl-[4.5rem]">
+                                        <div className="flex gap-6 text-sm text-[var(--text-secondary)]">
+                                            <span className="flex items-center gap-2">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-cyan)]" />
-                                                {pack.flashcards.length} Cards
+                                                {pack.flashcards.length} Flashcards
                                             </span>
-                                            <span className="flex items-center gap-1.5">
+                                            <span className="flex items-center gap-2">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-[var(--secondary-gold)]" />
-                                                {pack.quizzes.length} Quiz
+                                                {pack.quizzes.length} Quizzes
                                             </span>
                                         </div>
-                                        <ChevronRight size={16} className="text-[var(--text-muted)] group-hover:text-[var(--accent-cyan)] group-hover:translate-x-1 transition-all" />
+                                        <span className="text-xs text-[var(--text-muted)]">
+                                            Created {new Date(pack.created_at).toLocaleDateString()}
+                                        </span>
                                     </div>
                                 </Card>
                             </Link>
