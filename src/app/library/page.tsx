@@ -133,11 +133,11 @@ export default function LibraryPage() {
                 ) : (
                     <motion.div
                         layout
-                        className="space-y-6"
+                        className="space-y-5"
                     >
                         {filteredPacks.map((pack) => (
                             <Link key={pack.id} href={`/study/${pack.id}`}>
-                                <Card className="cursor-pointer hover:border-[var(--accent-cyan)] transition-colors p-5 group">
+                                <Card className="cursor-pointer hover:border-[var(--accent-cyan)] transition-colors p-4 group">
                                     <div className="flex items-start justify-between mb-3">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 rounded-xl bg-[rgba(0,212,255,0.1)] flex items-center justify-center flex-shrink-0">
