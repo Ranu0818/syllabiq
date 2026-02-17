@@ -145,7 +145,7 @@ export default function HomePage() {
 
   return (
     <AppShell onSuccess={fetchRecentPacks}>
-      <div className="container md:max-w-6xl xl:max-w-7xl 2xl:max-w-[1600px] py-6">
+      <div className="w-full mx-auto px-4 md:px-6 xl:px-8 max-w-7xl 2xl:max-w-[1700px] py-6">
         {/* Premium Welcome Hero Card */}
         {isAuthenticated && profile ? (
           <motion.div
